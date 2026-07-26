@@ -1,0 +1,21 @@
+--- a/cmake/ClangToolChain.cmake
++++ b/cmake/ClangToolChain.cmake
+@@ -214,10 +214,14 @@
+         set(CMAKE_CXX_COMPILER ${ROCM_LLVM_BIN_DIR}/clang++${DEFAULT_ROCM_COMPILER_EXTENSION})
+         message(STATUS "Using ROCm Clang compilers from ${ROCM_LLVM_BIN_DIR}")
+     else()
+-        message(
+-            FATAL_ERROR
+-                "The directory ${ROCM_LLVM_BIN_DIR} does not exist. Cannot set ROCm Clang compilers."
+-        )
++        # Distro FHS: ROCM_PATH=/usr with system LLVM (no $ROCM_PATH/lib/llvm/bin)
++        find_program(_SYS_CLANG NAMES clang clang-23 clang-22 REQUIRED)
++        find_program(_SYS_CLANGXX NAMES clang++ clang++-23 clang++-22 REQUIRED)
++        set(CMAKE_C_COMPILER "${_SYS_CLANG}")
++        set(CMAKE_CXX_COMPILER "${_SYS_CLANGXX}")
++        message(STATUS "Using system Clang compilers: ${CMAKE_CXX_COMPILER} (no ${ROCM_LLVM_BIN_DIR})")
++        unset(_SYS_CLANG)
++        unset(_SYS_CLANGXX)
+     endif()
+ 
+     # In case the toolchain is not in the system path, add the ROCm folder to the CMAKE_PREFIX_PATH
