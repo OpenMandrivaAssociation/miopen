@@ -2,13 +2,16 @@
 
 Name:		miopen
 Version:	7.14.0
-Release:	2
+Release:	3
 %{!?rocm_llvm_maj_ver:%global rocm_llvm_maj_ver 23}
 Summary:	AMD ROCm deep learning primitive library
 License:	MIT
 Group:		System/Libraries
 URL:		https://github.com/ROCm/rocm-libraries
 Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-7.14/miopen.tar.gz#/miopen-%{version}.tar.gz
+# Offline FetchContent deps (ABF mock has no outbound network)
+Source1:	https://github.com/Dobiasd/FunctionalPlus/archive/refs/tags/v0.2.25.tar.gz#/FunctionalPlus-0.2.25.tar.gz
+Source2:	https://github.com/Dobiasd/frugally-deep/archive/refs/tags/v0.15.31.tar.gz#/frugally-deep-0.15.31.tar.gz
 # System clang (no $ROCM_PATH/lib/llvm/bin on FHS distros)
 Patch0:		0001-clang-toolchain-system-llvm.patch
 
@@ -34,7 +37,7 @@ BuildRequires:	pkgconfig(bzip2)
 BuildRequires:	half-devel
 BuildRequires:	boost-devel
 BuildRequires:	nlohmann_json-devel
-# Required: without Eigen3, CMake FetchContent downloads from gitlab (blocked in mock)
+# System Eigen avoids FetchContent download of eigen-3.4.0 (blocked in mock)
 BuildRequires:	cmake(Eigen3)
 BuildRequires:	python3
 
@@ -58,6 +61,10 @@ Headers and CMake package for MIOpen.
 
 %prep
 %autosetup -n miopen -p1
+# Unpack AI-tuning deps for offline FetchContent (see cmake/ThirdParty.cmake)
+mkdir -p _deps_src
+tar -xzf %{SOURCE1} -C _deps_src
+tar -xzf %{SOURCE2} -C _deps_src
 
 %build
 export CXX=clang++
@@ -70,6 +77,10 @@ CXXFLAGS=$(printf '%s' "%{optflags}" | sed -E 's/-mfpmath=[^ ]+//g; s/ -m[a-z0-9
 export CXXFLAGS="$CXXFLAGS -Wno-error=#warnings -Wno-#warnings"
 export CFLAGS="$CXXFLAGS"
 export LDFLAGS=$(printf '%s' "%{?__global_ldflags}" | sed -E 's/-mfpmath=[^ ]+//g; s/ -m[a-z0-9+.=]+//g')
+# Absolute paths for FetchContent offline sources (must exist before configure)
+_miopen_src=$(pwd)
+_fplus="$_miopen_src/_deps_src/FunctionalPlus-0.2.25"
+_fdeep="$_miopen_src/_deps_src/frugally-deep-0.15.31"
 
 %cmake %{rocm_cmake_fhs} %{rocm_cmake_gpu_targets} \
 	-DCMAKE_BUILD_TYPE=Release \
@@ -83,6 +94,9 @@ export LDFLAGS=$(printf '%s' "%{?__global_ldflags}" | sed -E 's/-mfpmath=[^ ]+//
 	-DMIOPEN_USE_HIPBLASLT=ON \
 	-DMIOPEN_BUILD_DRIVER=OFF \
 	-DBUILD_TESTING=OFF \
+	-DFETCHCONTENT_SOURCE_DIR_FUNCTIONALPLUS="$_fplus" \
+	-DFETCHCONTENT_SOURCE_DIR_FRUGALLY-DEEP="$_fdeep" \
+	-DFETCHCONTENT_FULLY_DISCONNECTED=ON \
 	-DROCM_PATH=%{_prefix} \
 	-DCMAKE_PREFIX_PATH=%{_prefix} \
 	-G Ninja
