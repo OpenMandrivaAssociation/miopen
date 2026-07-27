@@ -2,7 +2,7 @@
 
 Name:		miopen
 Version:	7.14.0
-Release:	1
+Release:	2
 %{!?rocm_llvm_maj_ver:%global rocm_llvm_maj_ver 23}
 Summary:	AMD ROCm deep learning primitive library
 License:	MIT
@@ -34,6 +34,8 @@ BuildRequires:	pkgconfig(bzip2)
 BuildRequires:	half-devel
 BuildRequires:	boost-devel
 BuildRequires:	nlohmann_json-devel
+# Required: without Eigen3, CMake FetchContent downloads from gitlab (blocked in mock)
+BuildRequires:	cmake(Eigen3)
 BuildRequires:	python3
 
 ExclusiveArch:	%{x86_64} %{aarch64}
