@@ -1,14 +1,14 @@
-# MIOpen — AMD deep learning primitives (TheRock 7.14)
+# MIOpen — AMD deep learning primitives (TheRock 10.0)
 
 Name:		miopen
-Version:	7.14.0
-Release:	3
+Version:	10.0.0
+Release:	1
 %{!?rocm_llvm_maj_ver:%global rocm_llvm_maj_ver 23}
 Summary:	AMD ROCm deep learning primitive library
 License:	MIT
 Group:		System/Libraries
 URL:		https://github.com/ROCm/rocm-libraries
-Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-7.14/miopen.tar.gz#/miopen-%{version}.tar.gz
+Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.0/miopen.tar.gz#/miopen-%{version}.tar.gz
 # Offline FetchContent deps (ABF mock has no outbound network)
 Source1:	https://github.com/Dobiasd/FunctionalPlus/archive/refs/tags/v0.2.25.tar.gz#/FunctionalPlus-0.2.25.tar.gz
 Source2:	https://github.com/Dobiasd/frugally-deep/archive/refs/tags/v0.15.31.tar.gz#/frugally-deep-0.15.31.tar.gz
@@ -112,6 +112,35 @@ if [ -d %{buildroot}/usr/lib/cmake/miopen ] && [ ! -d %{buildroot}%{_libdir}/cma
 	mv %{buildroot}/usr/lib/cmake/miopen %{buildroot}%{_libdir}/cmake/
 	rmdir %{buildroot}/usr/lib/cmake 2>/dev/null || true
 	rmdir %{buildroot}/usr/lib 2>/dev/null || true
+fi
+# 10.0 FetchContent no longer installs FunctionalPlus. Ship the vendored
+# headers + a small cmake package so miopen-devel consumers keep fplus.
+if [ ! -d %{buildroot}%{_includedir}/fplus ]; then
+	mkdir -p %{buildroot}%{_includedir}
+	cp -a _deps_src/FunctionalPlus-0.2.25/include/fplus %{buildroot}%{_includedir}/
+fi
+if [ ! -e %{buildroot}%{_libdir}/cmake/FunctionalPlus/FunctionalPlusConfig.cmake ]; then
+	mkdir -p %{buildroot}%{_libdir}/cmake/FunctionalPlus
+	cat > %{buildroot}%{_libdir}/cmake/FunctionalPlus/FunctionalPlusConfig.cmake <<'EOF'
+include(CMakeFindDependencyMacro)
+find_dependency(Threads)
+if(NOT TARGET FunctionalPlus::fplus)
+	add_library(FunctionalPlus::fplus INTERFACE IMPORTED)
+	set_target_properties(FunctionalPlus::fplus PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/../../../include")
+endif()
+EOF
+	cat > %{buildroot}%{_libdir}/cmake/FunctionalPlus/FunctionalPlusConfigVersion.cmake <<'EOF'
+set(PACKAGE_VERSION "0.2.25")
+if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+	set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+	set(PACKAGE_VERSION_COMPATIBLE TRUE)
+	if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+		set(PACKAGE_VERSION_EXACT TRUE)
+	endif()
+endif()
+EOF
 fi
 
 %files
