@@ -1,0 +1,52 @@
+--- a/src/hipconv/cmake/GpuArch.cmake
++++ b/src/hipconv/cmake/GpuArch.cmake
+@@ -33,10 +33,18 @@
+         message(FATAL_ERROR "hipconv_add_arch_lib(${name}): TARGETS is required")
+     endif()
+ 
+-    # NPI is dropped when the build serves none of its GPUs, because its registry
+-    # entry must not exist. Every other architecture is built regardless.
++    # Drop an arch the build serves no GPU for.
++    #
++    # Upstream still compiles it, using the first CMAKE_HIP_ARCHITECTURES entry
++    # so the host objects and the registry row exist, and those device bundles
++    # go unused. That stand-in is gfx803 here. CDNA4 (gfx950) and CDNA5 (gfx1250)
++    # MFMA builtins need gfx90a-insts or gfx950-insts and do not typecheck for it
++    # on LLVM 23; a gfx942 stand-in still rejects the gfx950-only 16x16x32 bf16
++    # builtin. No registry row and no device code: the runtime probe reports no
++    # hipconv kernels for a GPU this build does not serve. NPI already did this.
+     hipconv_intersect_gpus("${ARG_TARGETS}" served_gpus)
+-    if(NOT served_gpus AND ARG_NPI)
++    if(NOT served_gpus)
++        message(STATUS "hipconv: ${name} serves none of CMAKE_HIP_ARCHITECTURES; skipping")
+         return()
+     endif()
+ 
+@@ -80,22 +88,11 @@
+         HIPCONV_ARCH_NAME ${name}
+         HIPCONV_ARCH_TARGETS "${ARG_TARGETS}"
+     )
+-    # Emit device code only for the GPUs this architecture serves.
+-    #
+-    # Which sources compile never varies, so the host code is the same in every
+-    # build and only the offload bundles differ, as RFC0008 sharding requires. An
+-    # architecture the build serves no GPU for still needs a non-empty
+-    # HIP_ARCHITECTURES; it takes the first GPU in the build and its bundles go
+-    # unused. See docs/multi-arch-convergence.md.
+-    set(offload_gpus "${served_gpus}")
+-    if(NOT offload_gpus AND CMAKE_HIP_ARCHITECTURES)
+-        list(GET CMAKE_HIP_ARCHITECTURES 0 offload_gpus)
+-    endif()
+-    if(offload_gpus)
+-        set_target_properties(hipconv_arch_${name} PROPERTIES
+-            HIP_ARCHITECTURES "${offload_gpus}"
+-        )
+-    endif()
++    # Device code only for the GPUs this architecture actually serves.
++    # Unserved arches returned above, so this list is non-empty.
++    set_target_properties(hipconv_arch_${name} PROPERTIES
++        HIP_ARCHITECTURES "${served_gpus}"
++    )
+     # The shipped kernels' disassembly is what hot_loop_check.py reads, so the collection
+     # has to run after this library rather than only after the tests. It already did by
+     # accident, since every test links this; saying so keeps a library-only build honest.

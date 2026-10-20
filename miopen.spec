@@ -14,6 +14,11 @@ Source1:	https://github.com/Dobiasd/FunctionalPlus/archive/refs/tags/v0.2.25.tar
 Source2:	https://github.com/Dobiasd/frugally-deep/archive/refs/tags/v0.15.31.tar.gz#/frugally-deep-0.15.31.tar.gz
 # System clang (no $ROCM_PATH/lib/llvm/bin on FHS distros)
 Patch0:		0001-clang-toolchain-system-llvm.patch
+# hipconv's CDNA4/CDNA5 targets are gfx950/gfx1250. When those are not in
+# the GPU list it compiles them for the first ISA (gfx803). LLVM 23 cannot
+# typecheck those MFMA builtins there, and a gfx942 stand-in still lacks
+# gfx950-insts. Skip an arch this build does not serve.
+Patch1:		0002-hipconv-skip-unserved-arch.patch
 
 # HIP/device build yields empty debugsource; skip empty debuginfo packages
 %global debug_package %{nil}
