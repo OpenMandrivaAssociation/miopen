@@ -147,6 +147,9 @@ else()
 endif()
 EOF
 fi
+# ph300-1 680753 compiled, then filled the disk while cpio packed
+# gfx120020.HIP.fdb.txt. The ninja objects are still on disk then.
+rm -rf build _deps_src
 
 %files
 %license LICENSE.md
