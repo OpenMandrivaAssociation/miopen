@@ -1,3 +1,8 @@
+Skip hipconv arch libraries whose TARGETS miss CMAKE_HIP_ARCHITECTURES.
+The parent only records a target hipconv_add_arch_lib actually created,
+and the stand-in offload pass only sees those targets. Building CDNA4
+or CDNA5 for gfx803 fails typecheck on LLVM 23.
+
 --- a/src/hipconv/cmake/GpuArch.cmake
 +++ b/src/hipconv/cmake/GpuArch.cmake
 @@ -33,10 +33,18 @@
@@ -22,31 +27,3 @@
          return()
      endif()
  
-@@ -80,22 +88,11 @@
-         HIPCONV_ARCH_NAME ${name}
-         HIPCONV_ARCH_TARGETS "${ARG_TARGETS}"
-     )
--    # Emit device code only for the GPUs this architecture serves.
--    #
--    # Which sources compile never varies, so the host code is the same in every
--    # build and only the offload bundles differ, as RFC0008 sharding requires. An
--    # architecture the build serves no GPU for still needs a non-empty
--    # HIP_ARCHITECTURES; it takes the first GPU in the build and its bundles go
--    # unused. See docs/multi-arch-convergence.md.
--    set(offload_gpus "${served_gpus}")
--    if(NOT offload_gpus AND CMAKE_HIP_ARCHITECTURES)
--        list(GET CMAKE_HIP_ARCHITECTURES 0 offload_gpus)
--    endif()
--    if(offload_gpus)
--        set_target_properties(hipconv_arch_${name} PROPERTIES
--            HIP_ARCHITECTURES "${offload_gpus}"
--        )
--    endif()
-+    # Device code only for the GPUs this architecture actually serves.
-+    # Unserved arches returned above, so this list is non-empty.
-+    set_target_properties(hipconv_arch_${name} PROPERTIES
-+        HIP_ARCHITECTURES "${served_gpus}"
-+    )
-     # The shipped kernels' disassembly is what hot_loop_check.py reads, so the collection
-     # has to run after this library rather than only after the tests. It already did by
-     # accident, since every test links this; saying so keeps a library-only build honest.

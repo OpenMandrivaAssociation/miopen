@@ -1,14 +1,14 @@
-# MIOpen — AMD deep learning primitives (TheRock 10.1)
+# MIOpen — AMD deep learning primitives (TheRock 10.2)
 
 Name:		miopen
-Version:	10.1.0
+Version:	10.2.0
 Release:	1
 %{!?rocm_llvm_maj_ver:%global rocm_llvm_maj_ver 23}
 Summary:	AMD ROCm deep learning primitive library
 License:	MIT
 Group:		System/Libraries
 URL:		https://github.com/ROCm/rocm-libraries
-Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/miopen.tar.gz#/miopen-%{version}.tar.gz
+Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.2/miopen.tar.gz#/miopen-%{version}.tar.gz
 # Offline FetchContent deps (ABF mock has no outbound network)
 Source1:	https://github.com/Dobiasd/FunctionalPlus/archive/refs/tags/v0.2.25.tar.gz#/FunctionalPlus-0.2.25.tar.gz
 Source2:	https://github.com/Dobiasd/frugally-deep/archive/refs/tags/v0.15.31.tar.gz#/frugally-deep-0.15.31.tar.gz
